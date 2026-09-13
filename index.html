@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EBSi 기출문제 다운로더</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="masthead-row">
+      <span class="mark">EBSi</span>
+      <span class="mark-sub">기출문제</span>
+    </div>
+    <h1>EBSi 기출문제 다운로더</h1>
+    <p class="lede">학년도와 과목을 고르면 기출문제와 정답, 해설을 한 번에 모아드립니다.</p>
+  </header>
+
+  <main class="sheet">
+
+    <section class="item" id="step-years">
+      <div class="item-head">
+        <span class="bubble" data-bubble="1">1</span>
+        <h2>연도 선택</h2>
+        <span class="item-hint">시행연도 기준</span>
+        <button type="button" class="text-btn" data-select-all="years">전체 선택</button>
+      </div>
+      <div class="chip-grid" id="years-grid">
+        <p class="hint">연도 목록을 불러오는 중입니다&hellip;</p>
+      </div>
+    </section>
+
+    <section class="item" id="step-grade">
+      <div class="item-head">
+        <span class="bubble" data-bubble="2">2</span>
+        <h2>학년 선택</h2>
+      </div>
+      <div class="segmented" id="grade-segmented" role="radiogroup" aria-label="학년 선택">
+        <button type="button" data-grade="1" role="radio" aria-checked="false">고1</button>
+        <button type="button" data-grade="2" role="radio" aria-checked="false">고2</button>
+        <button type="button" data-grade="3" role="radio" aria-checked="false">고3</button>
+      </div>
+    </section>
+
+    <section class="item" id="step-months">
+      <div class="item-head">
+        <span class="bubble" data-bubble="3">3</span>
+        <h2>시행월 선택</h2>
+        <span class="item-hint">3월 ~ 12월</span>
+        <button type="button" class="text-btn" data-select-all="months">전체 선택</button>
+      </div>
+      <div class="chip-grid" id="months-grid"></div>
+    </section>
+
+    <section class="item" id="step-subjects">
+      <div class="item-head">
+        <span class="bubble" data-bubble="4">4</span>
+        <h2>과목 선택</h2>
+      </div>
+      <div id="subjects-container">
+        <p class="hint">학년을 먼저 선택해 주세요.</p>
+      </div>
+    </section>
+
+    <div class="search-bar">
+      <button id="search-btn" class="btn-ink" disabled>기출문제 검색</button>
+      <p id="search-status" class="status" role="status" aria-live="polite"></p>
+    </div>
+
+    <section class="item results" id="results-section" hidden>
+      <div class="item-head">
+        <span class="bubble" data-bubble="5">5</span>
+        <h2>검색 결과</h2>
+        <span class="item-hint" id="result-count"></span>
+      </div>
+
+      <div class="results-toolbar">
+        <label class="check-all">
+          <input type="checkbox" id="select-all-results" checked />
+          전체 선택
+        </label>
+        <button id="zip-btn" class="btn-stamp" type="button">
+          <span class="stamp-ring">받기</span>
+          <span class="stamp-label">선택 파일 전체 받기</span>
+        </button>
+      </div>
+
+      <ul class="results-list" id="results-list"></ul>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    <p>이 도구는 EBSi가 공개한 자료를 편의상 모아 내려받도록 도와드리며, 개인 학습 목적으로만 사용해 주세요.</p>
+  </footer>
+
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="subjects-data.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
