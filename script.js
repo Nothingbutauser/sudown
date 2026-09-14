@@ -3,11 +3,14 @@
 
   // ⚠️ 배포한 Cloudflare Worker 주소로 반드시 바꿔주세요.
   // 예: "https://ebsi-proxy.<your-subdomain>.workers.dev"
-  const API_BASE = "https://suneung-worker.hyeseong2thac.workers.dev";
+  const API_BASE = "https://ebsi-proxy.YOUR_SUBDOMAIN.workers.dev";
 
   const MONTHS = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const TOTAL_STEPS = 5;
 
   const state = {
+    currentStep: 1,
+    maxReachedStep: 1,
     years: new Set(),
     grade: null,
     months: new Set(),
@@ -21,21 +24,23 @@
     monthsGrid: document.getElementById("months-grid"),
     gradeSegmented: document.getElementById("grade-segmented"),
     subjectsContainer: document.getElementById("subjects-container"),
-    searchBtn: document.getElementById("search-btn"),
+    wizardNav: document.getElementById("wizard-nav"),
+    backBtn: document.getElementById("back-btn"),
+    nextBtn: document.getElementById("next-btn"),
+    backToEdit: document.getElementById("back-to-edit"),
     searchStatus: document.getElementById("search-status"),
-    resultsSection: document.getElementById("results-section"),
     resultCount: document.getElementById("result-count"),
+    resultsToolbar: document.getElementById("results-toolbar"),
     resultsList: document.getElementById("results-list"),
     selectAllResults: document.getElementById("select-all-results"),
     zipBtn: document.getElementById("zip-btn"),
     toast: document.getElementById("toast"),
-    bubbles: {
-      1: document.querySelector('[data-bubble="1"]'),
-      2: document.querySelector('[data-bubble="2"]'),
-      3: document.querySelector('[data-bubble="3"]'),
-      4: document.querySelector('[data-bubble="4"]'),
-    },
+    stepNodes: [...document.querySelectorAll(".step-node")],
+    stepLines: [...document.querySelectorAll(".step-line")],
   };
+
+  const reduceMotion = () =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   let toastTimer = null;
   function showToast(message, isError = false) {
@@ -46,26 +51,130 @@
     toastTimer = setTimeout(() => el.toast.classList.remove("show"), 3200);
   }
 
-  function updateBubbles() {
-    el.bubbles[1].classList.toggle("done", state.years.size > 0);
-    el.bubbles[2].classList.toggle("done", state.grade !== null);
-    el.bubbles[3].classList.toggle("done", state.months.size > 0);
-    el.bubbles[4].classList.toggle("done", state.subjects.size > 0);
+  // ---------- Wizard: step validity / navigation ----------
+
+  function canAdvance(step) {
+    switch (step) {
+      case 1: return state.years.size > 0;
+      case 2: return state.grade !== null;
+      case 3: return state.months.size > 0;
+      case 4: return state.subjects.size > 0;
+      default: return true;
+    }
   }
 
-  function updateSearchButton() {
-    const ready =
-      state.years.size > 0 &&
-      state.grade !== null &&
-      state.months.size > 0 &&
-      state.subjects.size > 0;
-    el.searchBtn.disabled = !ready;
+  function updateStepperUI() {
+    el.stepNodes.forEach((node) => {
+      const idx = Number(node.dataset.step);
+      const isDone = idx < state.currentStep;
+      const isCurrent = idx === state.currentStep;
+      const wasDone = node.classList.contains("done");
+
+      node.classList.toggle("done", isDone);
+      node.classList.toggle("current", isCurrent);
+      node.disabled = idx > state.maxReachedStep;
+      node.setAttribute("aria-current", isCurrent ? "step" : "false");
+
+      if (isDone && !wasDone && !reduceMotion()) {
+        node.classList.add("pop");
+        node.addEventListener("animationend", () => node.classList.remove("pop"), { once: true });
+      }
+    });
+
+    el.stepLines.forEach((line) => {
+      const idx = Number(line.dataset.line);
+      line.classList.toggle("done", idx < state.currentStep);
+    });
+  }
+
+  function updateNavUI() {
+    el.backBtn.disabled = state.currentStep === 1;
+    el.nextBtn.textContent = state.currentStep === 4 ? "기출문제 검색" : "다음";
+    el.nextBtn.disabled = !canAdvance(state.currentStep);
+    el.wizardNav.hidden = state.currentStep === 5;
   }
 
   function refresh() {
-    updateBubbles();
-    updateSearchButton();
+    updateStepperUI();
+    updateNavUI();
   }
+
+  const TRANSITION_MS = 200; // CSS out-animation(.16s) + 여유분
+
+  let isTransitioning = false;
+
+  function goToStep(target, direction) {
+    if (isTransitioning) return;
+
+    const current = document.querySelector(".screen.active");
+    const nextScreen = document.querySelector(`.screen[data-screen="${target}"]`);
+    if (!nextScreen || current === nextScreen) return;
+
+    state.currentStep = target;
+    state.maxReachedStep = Math.max(state.maxReachedStep, target);
+    refresh();
+
+    const activate = () => {
+      nextScreen.classList.add("active");
+      if (!reduceMotion()) {
+        const inClass = direction === "forward" ? "anim-in-forward" : "anim-in-back";
+        nextScreen.classList.add(inClass);
+        const clearIn = () => nextScreen.classList.remove(inClass);
+        nextScreen.addEventListener("animationend", clearIn, { once: true });
+        setTimeout(clearIn, TRANSITION_MS + 100);
+      }
+      isTransitioning = false;
+    };
+
+    if (!current) {
+      activate();
+      return;
+    }
+
+    if (reduceMotion()) {
+      current.classList.remove("active");
+      activate();
+      return;
+    }
+
+    isTransitioning = true;
+    const outClass = direction === "forward" ? "anim-out-forward" : "anim-out-back";
+    let settled = false;
+    // animationend가 정상적으로 오면 그때 넘어가고, 혹시 못 받더라도
+    // 타임아웃으로 반드시 다음 화면으로 넘어가도록 이중 안전장치를 둔다.
+    const finishOut = () => {
+      if (settled) return;
+      settled = true;
+      current.classList.remove("active", outClass);
+      activate();
+    };
+    current.classList.add(outClass);
+    current.addEventListener("animationend", finishOut, { once: true });
+    setTimeout(finishOut, TRANSITION_MS);
+  }
+
+  el.backBtn.addEventListener("click", () => {
+    if (state.currentStep > 1) goToStep(state.currentStep - 1, "back");
+  });
+
+  el.nextBtn.addEventListener("click", () => {
+    if (!canAdvance(state.currentStep)) return;
+    if (state.currentStep < 4) {
+      goToStep(state.currentStep + 1, "forward");
+    } else if (state.currentStep === 4) {
+      startSearch();
+    }
+  });
+
+  el.backToEdit.addEventListener("click", () => goToStep(4, "back"));
+
+  el.stepNodes.forEach((node) => {
+    node.addEventListener("click", () => {
+      const target = Number(node.dataset.step);
+      if (target > state.maxReachedStep || target === state.currentStep) return;
+      goToStep(target, target > state.currentStep ? "forward" : "back");
+    });
+  });
 
   // ---------- Years (Worker 프록시 필요) ----------
 
@@ -224,11 +333,14 @@
 
   // ---------- Search (Worker 프록시 필요) ----------
 
-  el.searchBtn.addEventListener("click", async () => {
-    el.searchBtn.disabled = true;
+  async function startSearch() {
+    goToStep(5, "forward");
+
+    el.resultsToolbar.hidden = true;
+    el.resultsList.innerHTML = "";
+    el.resultCount.textContent = "";
     el.searchStatus.textContent = "검색 중입니다…";
     el.searchStatus.classList.remove("error");
-    el.resultsSection.hidden = true;
 
     const body = {
       years: [...state.years],
@@ -250,7 +362,7 @@
       state.selectedResults = new Set(data.results.map((_, i) => i));
 
       if (data.results.length === 0) {
-        el.searchStatus.textContent = "조건에 맞는 시험지가 없습니다. 선택 조건을 확인해 주세요.";
+        el.searchStatus.textContent = "조건에 맞는 시험지가 없습니다. 조건을 다시 선택해 주세요.";
       } else {
         el.searchStatus.textContent = "";
         renderResults();
@@ -259,14 +371,12 @@
       el.searchStatus.textContent = err.message;
       el.searchStatus.classList.add("error");
       showToast(err.message, true);
-    } finally {
-      updateSearchButton();
     }
-  });
+  }
 
   function renderResults() {
-    el.resultsSection.hidden = false;
     el.resultCount.textContent = `${state.results.length}개`;
+    el.resultsToolbar.hidden = false;
     el.selectAllResults.checked = true;
     el.resultsList.innerHTML = "";
 
@@ -297,8 +407,6 @@
       li.append(checkbox, name, getBtn);
       el.resultsList.appendChild(li);
     });
-
-    el.resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function syncSelectAllCheckbox() {

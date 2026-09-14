@@ -24,75 +24,91 @@
 
   <main class="sheet">
 
-    <section class="item" id="step-years">
-      <div class="item-head">
-        <span class="bubble" data-bubble="1">1</span>
-        <h2>연도 선택</h2>
-        <span class="item-hint">시행연도 기준</span>
-        <button type="button" class="text-btn" data-select-all="years">전체 선택</button>
-      </div>
-      <div class="chip-grid" id="years-grid">
-        <p class="hint">연도 목록을 불러오는 중입니다&hellip;</p>
-      </div>
-    </section>
+    <nav class="stepper" id="stepper" aria-label="진행 단계">
+      <button type="button" class="step-node" data-step="1"><span class="step-num">1</span><span class="step-label">연도</span></button>
+      <span class="step-line" data-line="1"></span>
+      <button type="button" class="step-node" data-step="2"><span class="step-num">2</span><span class="step-label">학년</span></button>
+      <span class="step-line" data-line="2"></span>
+      <button type="button" class="step-node" data-step="3"><span class="step-num">3</span><span class="step-label">월</span></button>
+      <span class="step-line" data-line="3"></span>
+      <button type="button" class="step-node" data-step="4"><span class="step-num">4</span><span class="step-label">과목</span></button>
+      <span class="step-line" data-line="4"></span>
+      <button type="button" class="step-node" data-step="5"><span class="step-num">5</span><span class="step-label">결과</span></button>
+    </nav>
 
-    <section class="item" id="step-grade">
-      <div class="item-head">
-        <span class="bubble" data-bubble="2">2</span>
-        <h2>학년 선택</h2>
-      </div>
-      <div class="segmented" id="grade-segmented" role="radiogroup" aria-label="학년 선택">
-        <button type="button" data-grade="1" role="radio" aria-checked="false">고1</button>
-        <button type="button" data-grade="2" role="radio" aria-checked="false">고2</button>
-        <button type="button" data-grade="3" role="radio" aria-checked="false">고3</button>
-      </div>
-    </section>
+    <div class="stage" id="stage">
 
-    <section class="item" id="step-months">
-      <div class="item-head">
-        <span class="bubble" data-bubble="3">3</span>
-        <h2>시행월 선택</h2>
-        <span class="item-hint">3월 ~ 12월</span>
-        <button type="button" class="text-btn" data-select-all="months">전체 선택</button>
-      </div>
-      <div class="chip-grid" id="months-grid"></div>
-    </section>
+      <section class="screen active" data-screen="1">
+        <div class="item-head">
+          <h2>연도 선택</h2>
+          <span class="item-hint">시행연도 기준</span>
+          <button type="button" class="text-btn" data-select-all="years">전체 선택</button>
+        </div>
+        <div class="chip-grid" id="years-grid">
+          <p class="hint">연도 목록을 불러오는 중입니다&hellip;</p>
+        </div>
+      </section>
 
-    <section class="item" id="step-subjects">
-      <div class="item-head">
-        <span class="bubble" data-bubble="4">4</span>
-        <h2>과목 선택</h2>
-      </div>
-      <div id="subjects-container">
-        <p class="hint">학년을 먼저 선택해 주세요.</p>
-      </div>
-    </section>
+      <section class="screen" data-screen="2">
+        <div class="item-head">
+          <h2>학년 선택</h2>
+        </div>
+        <div class="segmented" id="grade-segmented" role="radiogroup" aria-label="학년 선택">
+          <button type="button" data-grade="1" role="radio" aria-checked="false">고1</button>
+          <button type="button" data-grade="2" role="radio" aria-checked="false">고2</button>
+          <button type="button" data-grade="3" role="radio" aria-checked="false">고3</button>
+        </div>
+      </section>
 
-    <div class="search-bar">
-      <button id="search-btn" class="btn-ink" disabled>기출문제 검색</button>
-      <p id="search-status" class="status" role="status" aria-live="polite"></p>
+      <section class="screen" data-screen="3">
+        <div class="item-head">
+          <h2>시행월 선택</h2>
+          <span class="item-hint">3월 ~ 12월</span>
+          <button type="button" class="text-btn" data-select-all="months">전체 선택</button>
+        </div>
+        <div class="chip-grid" id="months-grid"></div>
+      </section>
+
+      <section class="screen" data-screen="4">
+        <div class="item-head">
+          <h2>과목 선택</h2>
+        </div>
+        <div id="subjects-container">
+          <p class="hint">학년을 먼저 선택해 주세요.</p>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="5">
+        <div class="item-head">
+          <button type="button" class="text-btn back-link" id="back-to-edit">&larr; 조건 다시 선택</button>
+        </div>
+        <div class="item-head">
+          <h2>검색 결과</h2>
+          <span class="item-hint" id="result-count"></span>
+        </div>
+
+        <p id="search-status" class="status" role="status" aria-live="polite"></p>
+
+        <div class="results-toolbar" id="results-toolbar" hidden>
+          <label class="check-all">
+            <input type="checkbox" id="select-all-results" checked />
+            전체 선택
+          </label>
+          <button id="zip-btn" class="btn-stamp" type="button">
+            <span class="stamp-ring">받기</span>
+            <span class="stamp-label">선택 파일 전체 받기</span>
+          </button>
+        </div>
+
+        <ul class="results-list" id="results-list"></ul>
+      </section>
+
     </div>
 
-    <section class="item results" id="results-section" hidden>
-      <div class="item-head">
-        <span class="bubble" data-bubble="5">5</span>
-        <h2>검색 결과</h2>
-        <span class="item-hint" id="result-count"></span>
-      </div>
-
-      <div class="results-toolbar">
-        <label class="check-all">
-          <input type="checkbox" id="select-all-results" checked />
-          전체 선택
-        </label>
-        <button id="zip-btn" class="btn-stamp" type="button">
-          <span class="stamp-ring">받기</span>
-          <span class="stamp-label">선택 파일 전체 받기</span>
-        </button>
-      </div>
-
-      <ul class="results-list" id="results-list"></ul>
-    </section>
+    <div class="wizard-nav" id="wizard-nav">
+      <button type="button" class="btn-ghost" id="back-btn">이전</button>
+      <button type="button" class="btn-ink" id="next-btn" disabled>다음</button>
+    </div>
 
   </main>
 
