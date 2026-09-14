@@ -3,7 +3,7 @@
 
   // ⚠️ 배포한 Cloudflare Worker 주소로 반드시 바꿔주세요.
   // 예: "https://ebsi-proxy.<your-subdomain>.workers.dev"
-  const API_BASE = "https://ebsi-proxy.YOUR_SUBDOMAIN.workers.dev";
+  const API_BASE = "https://suneung-worker.hyeseong2thac.workers.dev";
 
   const MONTHS = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
   const TOTAL_STEPS = 5;
