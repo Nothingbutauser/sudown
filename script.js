@@ -1,8 +1,6 @@
 (() => {
   "use strict";
-
-  // ⚠️ 배포한 Cloudflare Worker 주소로 반드시 바꿔주세요.
-  // 예: "https://ebsi-proxy.<your-subdomain>.workers.dev"
+  // suneung worker
   const API_BASE = "https://suneung-worker.hyeseong2thac.workers.dev";
 
   const MONTHS = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
@@ -383,9 +381,22 @@
     { key: "solution", label: "해설" },
   ];
 
+  // 영어 영역처럼 듣기평가/대본이 함께 배포되는 경우를 위한 5분류 라벨.
+  // (문제 안에 이미 "듣기"라는 단어가 섞여 있을 수 있어, 아래 detectFileType에서
+  //  "대본" → "듣기" → "정답" → "해설" 순으로 먼저 걸러낸다.)
+  const ENGLISH_FILE_TYPE_LABELS = [
+    { key: "problem", label: "문제" },
+    { key: "listening", label: "듣기" },
+    { key: "script", label: "대본" },
+    { key: "answer", label: "정답" },
+    { key: "solution", label: "해설" },
+  ];
+
   function detectFileType(nameWithoutExt) {
     if (/해설/.test(nameWithoutExt)) return "solution";
     if (/정답/.test(nameWithoutExt)) return "answer";
+    if (/대본/.test(nameWithoutExt)) return "script";
+    if (/듣기/.test(nameWithoutExt)) return "listening";
     return "problem";
   }
 
@@ -402,6 +413,9 @@
         .replace(/정답\s*(및|[,/])?\s*해설/g, "")
         .replace(/해설/g, "")
         .replace(/정답/g, "")
+        .replace(/듣기\s*대본/g, "")
+        .replace(/대본/g, "")
+        .replace(/듣기/g, "")
         .replace(/문제/g, "")
         .replace(/[_[\]()]+/g, " ")
         .replace(/\s{2,}/g, " ")
@@ -418,7 +432,7 @@
         groups.set(key, {
           title: title || item.filename,
           subtitle,
-          files: { problem: null, answer: null, solution: null },
+          files: { problem: null, listening: null, script: null, answer: null, solution: null },
           indices: [],
         });
       }
@@ -493,11 +507,17 @@
         header.appendChild(badge);
       }
 
-      // 파일 종류별 다운로드 버튼 (문제 / 정답 / 해설)
+      // 파일 종류별 다운로드 버튼
+      // 듣기(mp3 등)나 대본 파일이 하나라도 있으면 영어 영역용 5분류
+      // (문제/듣기/대본/정답/해설)로, 그렇지 않으면 기본 3분류로 표시한다.
+      const isListeningExam = Boolean(group.files.listening || group.files.script);
+      const labels = isListeningExam ? ENGLISH_FILE_TYPE_LABELS : FILE_TYPE_LABELS;
+
       const fileRow = document.createElement("div");
       fileRow.className = "exam-card-files";
+      fileRow.classList.add(isListeningExam ? "cols-5" : "cols-3");
 
-      FILE_TYPE_LABELS.forEach(({ key, label }) => {
+      labels.forEach(({ key, label }) => {
         const file = group.files[key];
         const btn = document.createElement("button");
         btn.type = "button";
