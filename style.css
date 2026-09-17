@@ -571,8 +571,15 @@ h1 {
 
 .exam-card-files {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   border-top: 1.5px solid var(--border-ink);
+}
+
+.exam-card-files.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.exam-card-files.cols-5 {
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .exam-file-btn {
@@ -673,4 +680,5 @@ h1 {
   .wizard-nav .btn-ink { padding: 0.75rem 1.1rem; }
   .exam-card-title { white-space: normal; }
   .exam-file-btn { font-size: 0.85rem; padding: 0.7rem 0.3rem; }
+  .exam-card-files.cols-5 .exam-file-btn { font-size: 0.74rem; padding: 0.65rem 0.15rem; }
 }
