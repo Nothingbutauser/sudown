@@ -17,6 +17,7 @@
     subjects: new Map(), // code -> { code, category, name }
     results: [], // { filename, url }
     selectedResults: new Set(), // indices into state.results
+    resultGroups: [], // 문제/정답/해설로 묶인 결과
   };
 
   const el = {
@@ -374,37 +375,147 @@
     }
   }
 
+  // ---------- 결과 묶기 (문제 / 정답 / 해설) ----------
+
+  const FILE_TYPE_LABELS = [
+    { key: "problem", label: "문제" },
+    { key: "answer", label: "정답" },
+    { key: "solution", label: "해설" },
+  ];
+
+  function detectFileType(nameWithoutExt) {
+    if (/해설/.test(nameWithoutExt)) return "solution";
+    if (/정답/.test(nameWithoutExt)) return "answer";
+    return "problem";
+  }
+
+  function buildResultGroups(results) {
+    const groups = new Map();
+
+    results.forEach((item, index) => {
+      const noExt = item.filename.replace(/\.[^.\s]+$/, "");
+      const type = detectFileType(noExt);
+
+      // 문제/정답/해설 표시어를 지운 나머지를 같은 시험지를 묶는 기준(key)이자
+      // 카드 제목으로 사용한다.
+      const title = noExt
+        .replace(/정답\s*(및|[,/])?\s*해설/g, "")
+        .replace(/해설/g, "")
+        .replace(/정답/g, "")
+        .replace(/문제/g, "")
+        .replace(/[_[\]()]+/g, " ")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+
+      const key = title || noExt;
+
+      if (!groups.has(key)) {
+        const examYearMatch = title.match(/(\d{4})\s*학년도/);
+        const subtitle = examYearMatch
+          ? `${Number(examYearMatch[1]) - 1}년 시행`
+          : "";
+
+        groups.set(key, {
+          title: title || item.filename,
+          subtitle,
+          files: { problem: null, answer: null, solution: null },
+          indices: [],
+        });
+      }
+
+      const group = groups.get(key);
+      // 같은 종류(예: 문제)의 파일이 여러 개 잡히면 먼저 찾은 것을 유지한다.
+      if (!group.files[type]) {
+        group.files[type] = { ...item, index };
+      }
+      group.indices.push(index);
+    });
+
+    return [...groups.values()];
+  }
+
   function renderResults() {
-    el.resultCount.textContent = `${state.results.length}개`;
+    const groups = buildResultGroups(state.results);
+    state.resultGroups = groups;
+
+    el.resultCount.textContent = `${groups.length}개 시험지 (파일 ${state.results.length}개)`;
     el.resultsToolbar.hidden = false;
     el.selectAllResults.checked = true;
     el.resultsList.innerHTML = "";
+    el.resultsList.classList.add("exam-grid");
 
-    state.results.forEach((item, index) => {
+    const gradeLabel = state.grade ? `고${state.grade}` : "";
+
+    groups.forEach((group) => {
       const li = document.createElement("li");
-      li.className = "result-row";
+      li.className = "exam-card";
+
+      // 헤더: 체크박스 + 제목/부제 + 학년 배지
+      const header = document.createElement("div");
+      header.className = "exam-card-header";
 
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
+      checkbox.className = "exam-card-check";
       checkbox.checked = true;
+      checkbox.setAttribute("aria-label", `${group.title} 전체 선택`);
       checkbox.addEventListener("change", () => {
-        if (checkbox.checked) state.selectedResults.add(index);
-        else state.selectedResults.delete(index);
+        group.indices.forEach((i) => {
+          if (checkbox.checked) state.selectedResults.add(i);
+          else state.selectedResults.delete(i);
+        });
         syncSelectAllCheckbox();
       });
 
-      const name = document.createElement("span");
-      name.className = "result-name";
-      name.textContent = item.filename;
-      name.title = item.filename;
+      const titleWrap = document.createElement("div");
+      titleWrap.className = "exam-card-title-wrap";
 
-      const getBtn = document.createElement("button");
-      getBtn.type = "button";
-      getBtn.className = "result-get";
-      getBtn.textContent = "받기";
-      getBtn.addEventListener("click", () => downloadSingle(item));
+      const titleEl = document.createElement("p");
+      titleEl.className = "exam-card-title";
+      titleEl.textContent = group.title;
+      titleEl.title = group.title;
+      titleWrap.appendChild(titleEl);
 
-      li.append(checkbox, name, getBtn);
+      if (group.subtitle) {
+        const subEl = document.createElement("p");
+        subEl.className = "exam-card-subtitle";
+        subEl.textContent = group.subtitle;
+        titleWrap.appendChild(subEl);
+      }
+
+      header.appendChild(checkbox);
+      header.appendChild(titleWrap);
+
+      if (gradeLabel) {
+        const badge = document.createElement("span");
+        badge.className = "exam-card-badge";
+        badge.textContent = gradeLabel;
+        header.appendChild(badge);
+      }
+
+      // 파일 종류별 다운로드 버튼 (문제 / 정답 / 해설)
+      const fileRow = document.createElement("div");
+      fileRow.className = "exam-card-files";
+
+      FILE_TYPE_LABELS.forEach(({ key, label }) => {
+        const file = group.files[key];
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "exam-file-btn";
+        btn.textContent = label;
+
+        if (file) {
+          btn.addEventListener("click", () => downloadSingle(file));
+        } else {
+          btn.disabled = true;
+          btn.classList.add("missing");
+          btn.title = "해당 파일이 없습니다";
+        }
+
+        fileRow.appendChild(btn);
+      });
+
+      li.append(header, fileRow);
       el.resultsList.appendChild(li);
     });
   }
@@ -416,7 +527,7 @@
   el.selectAllResults.addEventListener("change", () => {
     const checked = el.selectAllResults.checked;
     state.selectedResults = checked ? new Set(state.results.map((_, i) => i)) : new Set();
-    [...el.resultsList.querySelectorAll('input[type="checkbox"]')].forEach((cb) => {
+    [...el.resultsList.querySelectorAll(".exam-card-check")].forEach((cb) => {
       cb.checked = checked;
     });
   });
